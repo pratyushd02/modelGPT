@@ -17,7 +17,7 @@ y = pd.Series(data.target, name="PRICE")
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 # Initialize ModelGPT
-mg = ModelGPT()
+mg = ModelGPT(model="ollama/qwen3-coder:480b-cloud")
 model = mg.fit(X_train, y_train, task="regression")
 
 #comparing against sklearn model

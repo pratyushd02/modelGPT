@@ -1,3 +1,36 @@
+Metadata-Version: 2.4
+Name: modelgpt
+Version: 0.2.0
+Summary: LLM-powered AutoML — model selection, tuning, and training via any LLM
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/pratyushd02/modelGPT
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: litellm>=1.30
+Requires-Dist: pandas>=1.5
+Requires-Dist: scikit-learn>=1.3
+Requires-Dist: numpy>=1.24
+Provides-Extra: openai
+Requires-Dist: openai>=1.0; extra == "openai"
+Provides-Extra: anthropic
+Requires-Dist: anthropic>=0.20; extra == "anthropic"
+Provides-Extra: groq
+Requires-Dist: groq; extra == "groq"
+Provides-Extra: ollama
+Requires-Dist: ollama; extra == "ollama"
+Provides-Extra: boosting
+Requires-Dist: xgboost; extra == "boosting"
+Requires-Dist: lightgbm; extra == "boosting"
+Requires-Dist: catboost; extra == "boosting"
+Provides-Extra: all
+Requires-Dist: openai>=1.0; extra == "all"
+Requires-Dist: anthropic>=0.20; extra == "all"
+Requires-Dist: groq; extra == "all"
+Requires-Dist: ollama; extra == "all"
+Requires-Dist: xgboost; extra == "all"
+Requires-Dist: lightgbm; extra == "all"
+Requires-Dist: catboost; extra == "all"
+
 # ModelGPT
 
 **LLM-powered AutoML.** Describe your dataset, pick a task — ModelGPT asks an LLM to design, tune, and fit the best model for you. Works with OpenAI, Anthropic, Groq, Ollama, and any other LiteLLM-supported provider.

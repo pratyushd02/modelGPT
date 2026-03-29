@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "modelgpt"
+version = "0.2.0"
+description = "LLM-powered AutoML — model selection, tuning, and training via any LLM"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = [
+    "litellm>=1.30",
+    "pandas>=1.5",
+    "scikit-learn>=1.3",
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+openai    = ["openai>=1.0"]
+anthropic = ["anthropic>=0.20"]
+groq      = ["groq"]
+ollama    = ["ollama"]
+boosting  = ["xgboost", "lightgbm", "catboost"]
+all       = [
+    "openai>=1.0",
+    "anthropic>=0.20",
+    "groq",
+    "ollama",
+    "xgboost",
+    "lightgbm",
+    "catboost",
+]
+
+[project.urls]
+Homepage = "https://github.com/pratyushd02/modelGPT"
+
+[tool.setuptools.packages.find]
+include = ["modelgpt*"]

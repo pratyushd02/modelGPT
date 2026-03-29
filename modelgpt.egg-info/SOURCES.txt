@@ -1,0 +1,10 @@
+README.md
+pyproject.toml
+modelgpt/__init__.py
+modelgpt/modelgpt.py
+modelgpt.egg-info/PKG-INFO
+modelgpt.egg-info/SOURCES.txt
+modelgpt.egg-info/dependency_links.txt
+modelgpt.egg-info/requires.txt
+modelgpt.egg-info/top_level.txt
+tests/test.py
