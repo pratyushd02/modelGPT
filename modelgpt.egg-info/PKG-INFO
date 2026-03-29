@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: modelgpt
-Version: 0.2.0
+Version: 0.2.1
 Summary: LLM-powered AutoML — model selection, tuning, and training via any LLM
 License-Expression: MIT
 Project-URL: Homepage, https://github.com/pratyushd02/modelGPT
