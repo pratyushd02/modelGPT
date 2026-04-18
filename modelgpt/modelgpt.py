@@ -24,6 +24,13 @@ import pandas as pd
 import numpy as np
 import sklearn
 from sklearn.ensemble import GradientBoostingRegressor, GradientBoostingClassifier
+import tempfile
+import subprocess
+import pickle
+import json
+import sys
+import shutil
+from pathlib import Path
 
 try:
     import litellm
@@ -240,32 +247,101 @@ class ModelGPT:
         return raw.strip()
 
     @staticmethod
-    def _execute_code(
-        code: str, X: pd.DataFrame, y: pd.Series
-    ) -> tuple:
+    def _execute_code(code: str, X: pd.DataFrame, y: pd.Series) -> tuple:
         """
-        Execute LLM-generated code in an isolated namespace.
-
+        Sandboxed execution of LLM-generated code in an isolated subprocess.
         Returns (model, None) on success, (None, error_str) on failure.
         """
-        exec_globals = {
-            "__builtins__": __builtins__,
-            "pd": pd,
-            "np": np,
-            "sklearn": sklearn,
-        }
-        local_vars = {"X": X.copy(), "y": y.copy()}
+        timeout_seconds = 120  # bumped from 60 — GridSearchCV needs breathing room
 
-        try:
-            exec(code, exec_globals, local_vars)  # noqa: S102
-        except Exception as exc:
-            return None, str(exc)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
 
-        model = local_vars.get("model")
-        if model is None:
-            return None, "Variable 'model' was not defined in the generated code."
+            # --- Save training data ---
+            X.to_pickle(tmp / "X.pkl")
+            y.to_pickle(tmp / "y.pkl")
 
-        return model, None
+            # --- Write LLM code to its own file (NO f-string injection) ---
+            # This is the core fix: never embed LLM-generated code inside an
+            # f-string. Curly braces, backslashes, and triple-quotes in the
+            # generated code will silently corrupt an f-string template,
+            # producing a SyntaxError before the try/except even runs —
+            # so neither result.pkl nor error.txt gets written.
+            user_code_path = tmp / "user_code.py"
+            user_code_path.write_text(code, encoding="utf-8")
+
+            # --- Runner script (contains NO user content — safe to template) ---
+            runner_path = tmp / "runner.py"
+            runner_path.write_text(
+                textwrap.dedent("""\
+                    import pandas as pd
+                    import numpy as np
+                    import sklearn
+                    import pickle
+                    import traceback
+                    import importlib.util, sys
+
+                    X = pd.read_pickle("X.pkl")
+                    y = pd.read_pickle("y.pkl")
+
+                    try:
+                        spec = importlib.util.spec_from_file_location(
+                            "user_code", "user_code.py"
+                        )
+                        module = importlib.util.module_from_spec(spec)
+                        # Expose X and y into the module's namespace before exec
+                        module.X = X
+                        module.y = y
+                        spec.loader.exec_module(module)
+
+                        if not hasattr(module, "model"):
+                            raise ValueError(
+                                "Variable 'model' was not defined in the generated code."
+                            )
+
+                        with open("result.pkl", "wb") as f:
+                            pickle.dump(module.model, f)
+
+                    except Exception:
+                        with open("error.txt", "w", encoding="utf-8") as f:
+                            f.write(traceback.format_exc())
+                """),
+                encoding="utf-8",
+            )
+
+            # --- Run the subprocess ---
+            try:
+                proc = subprocess.run(
+                    [sys.executable, "runner.py"],
+                    cwd=tmpdir,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout_seconds,
+                    check=False,
+                )
+            except subprocess.TimeoutExpired:
+                return None, f"Execution timed out after {timeout_seconds}s."
+
+            # --- Success path ---
+            result_path = tmp / "result.pkl"
+            if result_path.exists():
+                try:
+                    with open(result_path, "rb") as f:
+                        model = pickle.load(f)
+                    return model, None
+                except Exception as e:
+                    return None, f"Could not deserialize trained model: {e}"
+
+            # --- Failure path: prefer error.txt, fall back to stderr ---
+            error_path = tmp / "error.txt"
+            if error_path.exists():
+                return None, error_path.read_text(encoding="utf-8").strip()
+
+            # stderr catches import errors and crashes before the try/except
+            if proc.stderr.strip():
+                return None, proc.stderr.strip()
+
+            return None, "Unknown sandbox execution failure."
 
     # ------------------------------------------------------------------
     # API key injection
