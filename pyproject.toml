@@ -37,3 +37,6 @@ Homepage = "https://github.com/pratyushd02/modelGPT"
 
 [tool.setuptools.packages.find]
 include = ["modelgpt*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

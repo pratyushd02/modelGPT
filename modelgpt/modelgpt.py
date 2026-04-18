@@ -123,7 +123,8 @@ class ModelGPT:
         task = task.lower()
         if task not in ("regression", "classification"):
             raise ValueError(f"task must be 'regression' or 'classification', got '{task}'.")
-
+        
+        X, y = self._validate_and_coerce(X, y, task)
         summary = self._summarize_dataset(X, y, task)
         prompt  = self._build_prompt(summary, task, metric)
 
@@ -137,7 +138,14 @@ class ModelGPT:
 
         for attempt in range(1, self.max_retries + 1):
             # ── call the LLM ──────────────────────────────────────────
-            raw_response = self._call_llm(messages)
+            try:
+                raw_response = self._call_llm(messages)
+            except (PermissionError, ConnectionError) as e:
+                if self.verbose:
+                    print(f"[ModelGPT] ⚠ LLM unavailable: {e}\n  Falling back immediately.")
+                fallback = _FALLBACK[task]
+                fallback.fit(X, y)
+                return fallback
 
             if self.verbose:
                 print(f"[ModelGPT] ── Attempt {attempt} ──────────────────────────")
@@ -386,3 +394,77 @@ class ModelGPT:
                 "  Or set the env var: export OPENAI_API_KEY='sk-...'\n"
             ) from exc
         raise RuntimeError(f"[ModelGPT] LLM call failed: {exc}") from exc
+
+    @staticmethod
+    def _validate_and_coerce(X, y, task):
+        # --- type coercion ---
+        if not isinstance(X, pd.DataFrame):
+            try:
+                X = pd.DataFrame(X)
+            except Exception:
+                raise TypeError("X must be a pandas DataFrame or array-like.")
+        
+        if not isinstance(y, pd.Series):
+            try:
+                y = pd.Series(y, name="target")
+            except Exception:
+                raise TypeError("y must be a pandas Series or array-like.")
+
+        # --- shape checks ---
+        if X.empty or len(y) == 0:
+            raise ValueError("X and y must not be empty.")
+        
+        if len(X) != len(y):
+            raise ValueError(
+                f"X and y must have the same number of rows. "
+                f"Got X={len(X)}, y={len(y)}."
+            )
+
+        if X.shape[1] == 0:
+            raise ValueError("X must have at least one feature column.")
+
+        # --- minimum viable sample size ---
+        if len(X) < 10:
+            raise ValueError(
+                f"Dataset has only {len(X)} rows — too few to train reliably."
+            )
+
+        # --- target checks ---
+        if y.isnull().all():
+            raise ValueError("y is all NaN — nothing to learn from.")
+
+        if task == "regression":
+            # coerce to numeric, flag if it fails
+            y_numeric = pd.to_numeric(y, errors="coerce")
+            if y_numeric.isnull().any() and not y.isnull().any():
+                raise TypeError(
+                    "Regression target contains non-numeric values. "
+                    "Use task='classification' or encode the target first."
+                )
+            y = y_numeric
+
+        if task == "classification":
+            n_classes = y.nunique()
+            if n_classes < 2:
+                raise ValueError(
+                    f"Classification requires at least 2 classes, found {n_classes}."
+                )
+            if n_classes > 50:
+                import warnings
+                warnings.warn(
+                    f"y has {n_classes} unique classes — is this really classification?",
+                    UserWarning,
+                    stacklevel=3,
+                )
+
+        # --- feature quality warnings ---
+        import warnings
+        all_nan_cols = X.columns[X.isnull().all()].tolist()
+        if all_nan_cols:
+            warnings.warn(
+                f"Columns with all NaN values will likely break generated code: {all_nan_cols}",
+                UserWarning,
+                stacklevel=3,
+            )
+
+        return X, y
