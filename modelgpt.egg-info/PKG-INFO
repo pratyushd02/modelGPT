@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: modelgpt
-Version: 0.2.1
+Version: 0.2.2
 Summary: LLM-powered AutoML — model selection, tuning, and training via any LLM
 License-Expression: MIT
 Project-URL: Homepage, https://github.com/pratyushd02/modelGPT
@@ -55,7 +55,9 @@ Your data  ──▶  Dataset summary  ──▶  LLM prompt
                                  (ensemble + CV tuning)
                                           │
                                           ▼
-                                   exec() in sandbox
+                                   Sandboxed execution
+                            (subprocess isolation, timeout=120s,
+                            crash & resource containment)
                                           │
                              ┌────────────┴────────────┐
                              ▼                         ▼
@@ -205,8 +207,7 @@ modelGPT/
 ├── modelgpt/
 │   ├── __init__.py          # Public API
 │   └── modelgpt.py          # Core ModelGPT class
-├── tests/
-│   └── test_modelgpt.py     # Test suite
+├── tests/                   # Test suite
 ├── example/
 │   └── example_usage.py     # Quickstart demo (diabetes dataset)
 ├── pyproject.toml

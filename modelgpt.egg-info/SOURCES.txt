@@ -8,3 +8,4 @@ modelgpt.egg-info/dependency_links.txt
 modelgpt.egg-info/requires.txt
 modelgpt.egg-info/top_level.txt
 tests/test.py
+tests/test_all.py

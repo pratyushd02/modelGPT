@@ -22,7 +22,9 @@ Your data  ──▶  Dataset summary  ──▶  LLM prompt
                                  (ensemble + CV tuning)
                                           │
                                           ▼
-                                   exec() in sandbox
+                                   Sandboxed execution
+                            (subprocess isolation, timeout=120s,
+                            crash & resource containment)
                                           │
                              ┌────────────┴────────────┐
                              ▼                         ▼
@@ -172,8 +174,7 @@ modelGPT/
 ├── modelgpt/
 │   ├── __init__.py          # Public API
 │   └── modelgpt.py          # Core ModelGPT class
-├── tests/
-│   └── test_modelgpt.py     # Test suite
+├── tests/                   # Test suite
 ├── example/
 │   └── example_usage.py     # Quickstart demo (diabetes dataset)
 ├── pyproject.toml
